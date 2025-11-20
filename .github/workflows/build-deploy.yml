@@ -10,6 +10,13 @@ on:
 permissions:
   contents: read
   id-token: write
+  
+env:
+  GCP_PROJECT: ${{ secrets.GCP_PROJECT }}
+  GCP_REGION: ${{ secrets.GCP_REGION }}
+  ARTIFACT_REGISTRY_REPOSITORY: ${{ secrets.ARTIFACT_REGISTRY_REPOSITORY }}
+  IMAGE_NAME: ${{ secrets.IMAGE_NAME }}
+  IMAGE_TAG: ${{ github.sha }}
 
 jobs:
   build:
@@ -17,12 +24,12 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       image: ${{ steps.set-image.outputs.image }}
-    env:
-      GCP_PROJECT: ${{ secrets.GCP_PROJECT }}
-      GCP_REGION: ${{ secrets.GCP_REGION }}
-      ARTIFACT_REGISTRY_REPOSITORY: ${{ secrets.ARTIFACT_REGISTRY_REPOSITORY }}
-      IMAGE_NAME: ${{ secrets.IMAGE_NAME }}
-      IMAGE_TAG: ${{ github.sha }}
+    # env:
+    #   GCP_PROJECT: ${{ secrets.GCP_PROJECT }}
+    #   GCP_REGION: ${{ secrets.GCP_REGION }}
+    #   ARTIFACT_REGISTRY_REPOSITORY: ${{ secrets.ARTIFACT_REGISTRY_REPOSITORY }}
+    #   IMAGE_NAME: ${{ secrets.IMAGE_NAME }}
+    #   IMAGE_TAG: ${{ github.sha }}
 
     steps:
       - name: Checkout
@@ -91,7 +98,7 @@ jobs:
         #   IMAGE: ${{ needs.build.outputs.image }}
         run: |
           gcloud run deploy cr-app \
-            --image=us-east1-docker.pkg.dev/green-talent-478006-i8/ar-docker-dev/cr-app-image:latest  \
+            --image=${GCP_REGION}-docker.pkg.dev/${GCP_PROJECT}/${ARTIFACT_REGISTRY_REPOSITORY}/${IMAGE_NAME}:latest  \
             --region ${{ secrets.GCP_REGION }} \
             --platform managed \
             --allow-unauthenticated \
