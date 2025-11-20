@@ -91,7 +91,7 @@ jobs:
           IMAGE: ${{ needs.build.outputs.image }}
         run: |
           gcloud run deploy cr-app \
-            --image ${{ needs.build.outputs.image }}  \
+            --image ${GCP_REGION}-docker.pkg.dev/${GCP_PROJECT}/${ARTIFACT_REGISTRY_REPOSITORY}/${IMAGE_NAME}:latest  \
             --region ${{ secrets.GCP_REGION }} \
             --platform managed \
             --allow-unauthenticated \
