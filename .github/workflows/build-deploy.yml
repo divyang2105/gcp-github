@@ -87,11 +87,11 @@ jobs:
           project_id: ${{ secrets.GCP_PROJECT }}
 
       - name: Deploy to Cloud Run
-        env:
-          IMAGE: ${{ needs.build.outputs.image }}
+        # env:
+        #   IMAGE: ${{ needs.build.outputs.image }}
         run: |
           gcloud run deploy cr-app \
-            --image ${GCP_REGION}-docker.pkg.dev/${GCP_PROJECT}/${ARTIFACT_REGISTRY_REPOSITORY}/${IMAGE_NAME}:latest  \
+            --image= us-east1-docker.pkg.dev/green-talent-478006-i8/ar-docker-dev/cr-app-image:latest  \
             --region ${{ secrets.GCP_REGION }} \
             --platform managed \
             --allow-unauthenticated \
