@@ -70,7 +70,7 @@ jobs:
     name: Deploy to Cloud Run (requires approval)
     needs: build
     runs-on: ubuntu-latest
-    environment: development
+    # environment: development
     # if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
     steps:
       - name: Checkout
@@ -91,11 +91,11 @@ jobs:
           IMAGE: ${{ needs.build.outputs.image }}
         run: |
           gcloud run deploy cr-app \
-            --image ${IMAGE} \
+            --image ${{ needs.build.outputs.image }}  \
             --region ${{ secrets.GCP_REGION }} \
             --platform managed \
             --allow-unauthenticated \
             --memory 2Gi \
             --cpu 2 \
             --port 8000 \
-            --service-account=${{ secrets.GCP_SA_KEY }}
+            --service-account demosa@green-talent-478006-i8.iam.gserviceaccount.com
