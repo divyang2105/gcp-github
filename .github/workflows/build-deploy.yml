@@ -63,6 +63,7 @@ jobs:
         id: set-image
         run: |
           IMAGE_URI=${GCP_REGION}-docker.pkg.dev/${GCP_PROJECT}/${ARTIFACT_REGISTRY_REPOSITORY}/${IMAGE_NAME}
+          echo "IMAGE_URI: $IMAGE_URI"
           echo "image=${IMAGE_URI}:${IMAGE_TAG}" >> $GITHUB_OUTPUT
 
   deploy:
