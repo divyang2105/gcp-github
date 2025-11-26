@@ -77,6 +77,8 @@ jobs:
     name: Deploy to Cloud Run (requires approval)
     needs: build
     runs-on: ubuntu-latest
+    env:
+      IMAGE: ${{ needs.build.outputs.image }}
     # environment: development
     # if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
     steps:
@@ -94,8 +96,8 @@ jobs:
           project_id: ${{ secrets.GCP_PROJECT }}
 
       - name: Deploy to Cloud Run
-        env:
-          IMAGE: ${{ needs.build.outputs.image }}
+        # env:
+        #   IMAGE: ${{ needs.build.outputs.image }}
         run: |
           gcloud run deploy cr-app \
             --image=${IMAGE} \
