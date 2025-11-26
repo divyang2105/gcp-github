@@ -66,7 +66,7 @@ jobs:
           # set job step output using GITHUB_OUTPUT
           echo "image=${IMAGE_URI}:${IMAGE_TAG}" >> $GITHUB_OUTPUT
 
-      - name: Debug: print step output (build)
+      - name: Debug - print step output (build)
         run: |
           echo "steps.set-image.outputs.image = '${{ steps.set-image.outputs.image }}'"
 
@@ -82,7 +82,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Debug: show build job output (needs)
+      - name: Debug - show build job output (needs)
         run: |
           echo "needs.build.outputs.image = '${{ needs.build.outputs.image }}'"
 
