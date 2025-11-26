@@ -26,13 +26,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Debug environment variables
+      - name: Debug secrets
         run: |
-          echo "GCP_PROJECT: $GCP_PROJECT"
-          echo "GCP_REGION: $GCP_REGION"
-          echo "ARTIFACT_REGISTRY_REPOSITORY: $ARTIFACT_REGISTRY_REPOSITORY"
-          echo "IMAGE_NAME: $IMAGE_NAME"
-          echo "IMAGE_TAG: $IMAGE_TAG"
+          echo "GCP_PROJECT: ${{ secrets.GCP_PROJECT }}"
+          echo "GCP_REGION: ${{ secrets.GCP_REGION }}"
+          echo "ARTIFACT_REGISTRY_REPOSITORY: ${{ secrets.ARTIFACT_REGISTRY_REPOSITORY }}"
+          echo "IMAGE_NAME: ${{ secrets.IMAGE_NAME }}"
+          echo "IMAGE_TAG: ${{ github.sha }}"
 
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v3
@@ -46,24 +46,24 @@ jobs:
 
       - name: Configure Docker for Artifact Registry
         run: |
-          gcloud auth configure-docker --quiet ${GCP_REGION}-docker.pkg.dev
+          gcloud auth configure-docker --quiet ${{ secrets.GCP_REGION }}-docker.pkg.dev
 
       - name: Build and Push Docker image
         run: |
-          IMAGE_URI=${GCP_REGION}-docker.pkg.dev/${GCP_PROJECT}/${ARTIFACT_REGISTRY_REPOSITORY}/${IMAGE_NAME}
-          echo "Building image: ${IMAGE_URI}:${IMAGE_TAG}"
-          docker build -t ${IMAGE_URI}:${IMAGE_TAG} .
-          echo "Pushing image: ${IMAGE_URI}:${IMAGE_TAG}"
-          docker push ${IMAGE_URI}:${IMAGE_TAG}
+          IMAGE_URI="${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT }}/${{ secrets.ARTIFACT_REGISTRY_REPOSITORY }}/${{ secrets.IMAGE_NAME }}"
+          echo "Building image: ${IMAGE_URI}:${{ github.sha }}"
+          docker build -t ${IMAGE_URI}:${{ github.sha }} .
+          echo "Pushing image: ${IMAGE_URI}:${{ github.sha }}"
+          docker push ${IMAGE_URI}:${{ github.sha }}
           
           echo "Tagging and pushing as latest"
-          docker tag ${IMAGE_URI}:${IMAGE_TAG} ${IMAGE_URI}:latest
+          docker tag ${IMAGE_URI}:${{ github.sha }} ${IMAGE_URI}:latest
           docker push ${IMAGE_URI}:latest
 
       - name: Set image output
         id: set-image
         run: |
-          IMAGE_URI="${GCP_REGION}-docker.pkg.dev/${GCP_PROJECT}/${ARTIFACT_REGISTRY_REPOSITORY}/${IMAGE_NAME}:${IMAGE_TAG}"
+          IMAGE_URI="${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT }}/${{ secrets.ARTIFACT_REGISTRY_REPOSITORY }}/${{ secrets.IMAGE_NAME }}:${{ github.sha }}"
           echo "Final image URI: $IMAGE_URI"
           echo "image=${IMAGE_URI}" >> $GITHUB_OUTPUT
 
@@ -76,9 +76,6 @@ jobs:
     name: Deploy to Cloud Run
     needs: build
     runs-on: ubuntu-latest
-    env:
-      GCP_PROJECT: ${{ secrets.GCP_PROJECT }}
-      GCP_REGION: ${{ secrets.GCP_REGION }}
 
     steps:
       - name: Checkout
@@ -109,7 +106,7 @@ jobs:
           echo "Deploying image: $IMAGE"
           gcloud run deploy cr-app \
             --image="$IMAGE" \
-            --region="${GCP_REGION}" \
+            --region="${{ secrets.GCP_REGION }}" \
             --platform=managed \
             --allow-unauthenticated \
             --memory=2Gi \
