@@ -24,12 +24,6 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       image: ${{ steps.set-image.outputs.image }}
-    # env:
-    #   GCP_PROJECT: ${{ secrets.GCP_PROJECT }}
-    #   GCP_REGION: ${{ secrets.GCP_REGION }}
-    #   ARTIFACT_REGISTRY_REPOSITORY: ${{ secrets.ARTIFACT_REGISTRY_REPOSITORY }}
-    #   IMAGE_NAME: ${{ secrets.IMAGE_NAME }}
-    #   IMAGE_TAG: ${{ github.sha }}
 
     steps:
       - name: Checkout
@@ -48,37 +42,35 @@ jobs:
       - name: Configure Docker for Artifact Registry
         run: |
           gcloud auth configure-docker --quiet ${GCP_REGION}-docker.pkg.dev
+
       - name: Build Docker image
         run: |
           IMAGE_URI=${GCP_REGION}-docker.pkg.dev/${GCP_PROJECT}/${ARTIFACT_REGISTRY_REPOSITORY}/${IMAGE_NAME}
           docker build -t ${IMAGE_URI}:${IMAGE_TAG} .
+
       - name: Push to Artifact Registry
         run: |
           IMAGE_URI=${GCP_REGION}-docker.pkg.dev/${GCP_PROJECT}/${ARTIFACT_REGISTRY_REPOSITORY}/${IMAGE_NAME}
           docker push ${IMAGE_URI}:${IMAGE_TAG}
+
       - name: Tag image as latest
         if: success()
         run: |
           IMAGE_URI=${GCP_REGION}-docker.pkg.dev/${GCP_PROJECT}/${ARTIFACT_REGISTRY_REPOSITORY}/${IMAGE_NAME}
           docker tag ${IMAGE_URI}:${IMAGE_TAG} ${IMAGE_URI}:latest
           docker push ${IMAGE_URI}:latest
+
       - name: Set image output
         id: set-image
-        shell: bash
         run: |
-          set -x
           IMAGE_URI="${GCP_REGION}-docker.pkg.dev/${GCP_PROJECT}/${ARTIFACT_REGISTRY_REPOSITORY}/${IMAGE_NAME}:${IMAGE_TAG}"
-          echo "IMAGE_URI=$IMAGE_URI"
+          echo "Setting image output to: $IMAGE_URI"
           echo "image=$IMAGE_URI" >> $GITHUB_OUTPUT
-          echo "===== GITHUB_OUTPUT contents ====="
-          cat $GITHUB_OUTPUT
-          echo "=================================="
+
   deploy:
     name: Deploy to Cloud Run (requires approval)
     needs: build
     runs-on: ubuntu-latest
-    # environment: development
-    # if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
