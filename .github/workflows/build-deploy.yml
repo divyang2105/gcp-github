@@ -3,8 +3,6 @@ name: Build & Deploy to Cloud Run
 on:
   push:
     branches: [ main ]
-  # pull_request:
-  #   branches: [ develop ]
   workflow_dispatch: {}
 
 permissions:
@@ -24,12 +22,6 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       image: ${{ steps.set-image.outputs.image }}
-    # env:
-    #   GCP_PROJECT: ${{ secrets.GCP_PROJECT }}
-    #   GCP_REGION: ${{ secrets.GCP_REGION }}
-    #   ARTIFACT_REGISTRY_REPOSITORY: ${{ secrets.ARTIFACT_REGISTRY_REPOSITORY }}
-    #   IMAGE_NAME: ${{ secrets.IMAGE_NAME }}
-    #   IMAGE_TAG: ${{ github.sha }}
 
     steps:
       - name: Checkout
@@ -71,19 +63,28 @@ jobs:
         run: |
           IMAGE_URI=${GCP_REGION}-docker.pkg.dev/${GCP_PROJECT}/${ARTIFACT_REGISTRY_REPOSITORY}/${IMAGE_NAME}
           echo "IMAGE_URI: $IMAGE_URI"
+          # set job step output using GITHUB_OUTPUT
           echo "image=${IMAGE_URI}:${IMAGE_TAG}" >> $GITHUB_OUTPUT
+
+      - name: Debug: print step output (build)
+        run: |
+          echo "steps.set-image.outputs.image = '${{ steps.set-image.outputs.image }}'"
 
   deploy:
     name: Deploy to Cloud Run (requires approval)
     needs: build
     runs-on: ubuntu-latest
     env:
+      # optional: still set as env, but we also assign inside the run block below
       IMAGE: ${{ needs.build.outputs.image }}
-    # environment: development
-    # if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Debug: show build job output (needs)
+        run: |
+          echo "needs.build.outputs.image = '${{ needs.build.outputs.image }}'"
 
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v3
@@ -96,11 +97,17 @@ jobs:
           project_id: ${{ secrets.GCP_PROJECT }}
 
       - name: Deploy to Cloud Run
-        # env:
-        #   IMAGE: ${{ needs.build.outputs.image }}
         run: |
+          # Use the output from the build job directly here to avoid subtle env-expression timing issues:
+          IMAGE_TO_DEPLOY="${{ needs.build.outputs.image }}"
+          echo "Deploying image: $IMAGE_TO_DEPLOY"
+          if [ -z "$IMAGE_TO_DEPLOY" ]; then
+            echo "ERROR: IMAGE_TO_DEPLOY is empty — build job did not produce an output."
+            exit 1
+          fi
+
           gcloud run deploy cr-app \
-            --image=${IMAGE} \
+            --image=${IMAGE_TO_DEPLOY} \
             --region ${{ secrets.GCP_REGION }} \
             --platform managed \
             --allow-unauthenticated \
