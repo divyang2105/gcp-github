@@ -77,8 +77,6 @@ jobs:
     name: Deploy to Cloud Run (requires approval)
     needs: build
     runs-on: ubuntu-latest
-    env:
-      IMAGE: ${{ needs.build.outputs.image }}
     # environment: development
     # if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
     steps:
@@ -88,7 +86,6 @@ jobs:
       - name: Debug - Check build outputs
         run: |
           echo "needs.build.outputs.image = '${{ needs.build.outputs.image }}'"
-          echo "env.IMAGE = '${{ env.IMAGE }}'"
 
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v3
@@ -101,11 +98,9 @@ jobs:
           project_id: ${{ secrets.GCP_PROJECT }}
 
       - name: Deploy to Cloud Run
-        # env:
-        #   IMAGE: ${{ needs.build.outputs.image }}
         run: |
           gcloud run deploy cr-app \
-            --image=${IMAGE}  \
+            --image=${{ needs.build.outputs.image }} \
             --region ${{ secrets.GCP_REGION }} \
             --platform managed \
             --allow-unauthenticated \
