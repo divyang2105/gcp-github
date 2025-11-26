@@ -3,20 +3,11 @@ name: Build & Deploy to Cloud Run
 on:
   push:
     branches: [ main ]
-  # pull_request:
-  #   branches: [ develop ]
   workflow_dispatch: {}
 
 permissions:
   contents: read
   id-token: write
-  
-env:
-  GCP_PROJECT: ${{ secrets.GCP_PROJECT }}
-  GCP_REGION: ${{ secrets.GCP_REGION }}
-  ARTIFACT_REGISTRY_REPOSITORY: ${{ secrets.ARTIFACT_REGISTRY_REPOSITORY }}
-  IMAGE_NAME: ${{ secrets.IMAGE_NAME }}
-  IMAGE_TAG: ${{ github.sha }}
 
 jobs:
   build:
@@ -24,10 +15,24 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       image: ${{ steps.set-image.outputs.image }}
+    env:
+      GCP_PROJECT: ${{ secrets.GCP_PROJECT }}
+      GCP_REGION: ${{ secrets.GCP_REGION }}
+      ARTIFACT_REGISTRY_REPOSITORY: ${{ secrets.ARTIFACT_REGISTRY_REPOSITORY }}
+      IMAGE_NAME: ${{ secrets.IMAGE_NAME }}
+      IMAGE_TAG: ${{ github.sha }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Debug environment variables
+        run: |
+          echo "GCP_PROJECT: $GCP_PROJECT"
+          echo "GCP_REGION: $GCP_REGION"
+          echo "ARTIFACT_REGISTRY_REPOSITORY: $ARTIFACT_REGISTRY_REPOSITORY"
+          echo "IMAGE_NAME: $IMAGE_NAME"
+          echo "IMAGE_TAG: $IMAGE_TAG"
 
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v3
@@ -43,20 +48,15 @@ jobs:
         run: |
           gcloud auth configure-docker --quiet ${GCP_REGION}-docker.pkg.dev
 
-      - name: Build Docker image
+      - name: Build and Push Docker image
         run: |
           IMAGE_URI=${GCP_REGION}-docker.pkg.dev/${GCP_PROJECT}/${ARTIFACT_REGISTRY_REPOSITORY}/${IMAGE_NAME}
+          echo "Building image: ${IMAGE_URI}:${IMAGE_TAG}"
           docker build -t ${IMAGE_URI}:${IMAGE_TAG} .
-
-      - name: Push to Artifact Registry
-        run: |
-          IMAGE_URI=${GCP_REGION}-docker.pkg.dev/${GCP_PROJECT}/${ARTIFACT_REGISTRY_REPOSITORY}/${IMAGE_NAME}
+          echo "Pushing image: ${IMAGE_URI}:${IMAGE_TAG}"
           docker push ${IMAGE_URI}:${IMAGE_TAG}
-
-      - name: Tag image as latest
-        if: success()
-        run: |
-          IMAGE_URI=${GCP_REGION}-docker.pkg.dev/${GCP_PROJECT}/${ARTIFACT_REGISTRY_REPOSITORY}/${IMAGE_NAME}
+          
+          echo "Tagging and pushing as latest"
           docker tag ${IMAGE_URI}:${IMAGE_TAG} ${IMAGE_URI}:latest
           docker push ${IMAGE_URI}:latest
 
@@ -64,20 +64,29 @@ jobs:
         id: set-image
         run: |
           IMAGE_URI="${GCP_REGION}-docker.pkg.dev/${GCP_PROJECT}/${ARTIFACT_REGISTRY_REPOSITORY}/${IMAGE_NAME}:${IMAGE_TAG}"
-          echo "Setting image output to: $IMAGE_URI"
-          echo "image=$IMAGE_URI" >> $GITHUB_OUTPUT
+          echo "Final image URI: $IMAGE_URI"
+          echo "image=${IMAGE_URI}" >> $GITHUB_OUTPUT
+
+      - name: Verify output
+        run: |
+          echo "GITHUB_OUTPUT contents:"
+          cat $GITHUB_OUTPUT
 
   deploy:
-    name: Deploy to Cloud Run (requires approval)
+    name: Deploy to Cloud Run
     needs: build
     runs-on: ubuntu-latest
+    env:
+      GCP_PROJECT: ${{ secrets.GCP_PROJECT }}
+      GCP_REGION: ${{ secrets.GCP_REGION }}
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
       - name: Debug - Check build outputs
         run: |
-          echo "needs.build.outputs.image = '${{ needs.build.outputs.image }}'"
+          echo "Image from build job: '${{ needs.build.outputs.image }}'"
 
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v3
@@ -91,12 +100,19 @@ jobs:
 
       - name: Deploy to Cloud Run
         run: |
+          IMAGE="${{ needs.build.outputs.image }}"
+          if [ -z "$IMAGE" ]; then
+            echo "Error: Image URI is empty"
+            exit 1
+          fi
+          
+          echo "Deploying image: $IMAGE"
           gcloud run deploy cr-app \
-            --image=${{ needs.build.outputs.image }} \
-            --region ${{ secrets.GCP_REGION }} \
-            --platform managed \
+            --image="$IMAGE" \
+            --region="${GCP_REGION}" \
+            --platform=managed \
             --allow-unauthenticated \
-            --memory 2Gi \
-            --cpu 2 \
-            --port 8000 \
-            --service-account demosa@green-talent-478006-i8.iam.gserviceaccount.com
+            --memory=2Gi \
+            --cpu=2 \
+            --port=8000 \
+            --service-account=demosa@green-talent-478006-i8.iam.gserviceaccount.com
