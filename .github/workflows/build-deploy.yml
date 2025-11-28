@@ -89,15 +89,8 @@ jobs:
 
       - name: Deploy to Cloud Run
         run: |
-          echo "IMAGE="${{ needs.build.outputs.image }}""
-          if [ -z "$IMAGE" ]; then
-            echo "Error: Image URI is empty"
-            exit 1
-          fi
-          
-          echo "Deploying image: $IMAGE"
           gcloud run deploy cr-app \
-            --image="$IMAGE" \
+            --image="${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT }}/${{ secrets.ARTIFACT_REGISTRY_REPOSITORY }}/${{ secrets.IMAGE_NAME }}:latest" \
             --region="${{ secrets.GCP_REGION }}" \
             --platform=managed \
             --allow-unauthenticated \
@@ -105,3 +98,21 @@ jobs:
             --cpu=2 \
             --port=8000 \
             --service-account=demosa@green-talent-478006-i8.iam.gserviceaccount.com
+      # - name: Deploy to Cloud Run
+      #   run: |
+      #     echo "IMAGE="${{ needs.build.outputs.image }}""
+      #     if [ -z "$IMAGE" ]; then
+      #       echo "Error: Image URI is empty"
+      #       exit 1
+      #     fi
+          
+      #     echo "Deploying image: $IMAGE"
+      #     gcloud run deploy cr-app \
+      #       --image="$IMAGE" \
+      #       --region="${{ secrets.GCP_REGION }}" \
+      #       --platform=managed \
+      #       --allow-unauthenticated \
+      #       --memory=2Gi \
+      #       --cpu=2 \
+      #       --port=8000 \
+      #       --service-account=demosa@green-talent-478006-i8.iam.gserviceaccount.com
