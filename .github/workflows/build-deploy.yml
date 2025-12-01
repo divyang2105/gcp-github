@@ -52,19 +52,18 @@ jobs:
           docker tag ${IMAGE_URI}:${{ github.sha }} ${IMAGE_URI}:latest
           docker push ${IMAGE_URI}:latest
 
-      - name: Set image output
-        id: set-image
-        run: |
-          IMAGE_URI="${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT }}/${{ secrets.ARTIFACT_REGISTRY_REPOSITORY }}/${{ secrets.IMAGE_NAME }}:${{ github.sha }}"
-          echo "Final image URI: $IMAGE_URI"
-          echo "::set-output name=image::$IMAGE_URI"
-
       # - name: Set image output
       #   id: set-image
       #   run: |
       #     IMAGE_URI="${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT }}/${{ secrets.ARTIFACT_REGISTRY_REPOSITORY }}/${{ secrets.IMAGE_NAME }}:${{ github.sha }}"
       #     echo "Final image URI: $IMAGE_URI"
-      #     echo "image1=${IMAGE_URI}" >> $GITHUB_OUTPUT
+      #     echo "::set-output name=image::$IMAGE_URI"
+
+      - name: Set image output
+        id: set-image
+        run: |
+          IMAGE_URI="${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT }}/${{ secrets.ARTIFACT_REGISTRY_REPOSITORY }}/${{ secrets.IMAGE_NAME }}:${{ github.sha }}"
+          echo "image=$IMAGE_URI" >> "$GITHUB_OUTPUT"
 
       - name: Verify output
         run: |
