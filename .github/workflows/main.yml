@@ -25,10 +25,10 @@ jobs:
     outputs:
       image: ${{ steps.set-image.outputs.image }}
     env:
-      # GCP_PROJECT: ${{ secrets.GCP_PROJECT }}
-      # GCP_REGION: ${{ secrets.GCP_REGION }}
-      # ARTIFACT_REGISTRY_REPOSITORY: ${{ secrets.ARTIFACT_REGISTRY_REPOSITORY }}
-      # IMAGE_NAME: ${{ secrets.IMAGE_NAME }}
+      GCP_PROJECT: ${{ env.GCP_PROJECT }}
+      GCP_REGION: ${{ env.GCP_REGION }}
+      ARTIFACT_REGISTRY_REPOSITORY: ${{ env.ARTIFACT_REGISTRY_REPOSITORY }}
+      IMAGE_NAME: ${{ env.IMAGE_NAME }}
       IMAGE_TAG: ${{ github.sha }}
 
     steps:
