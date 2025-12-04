@@ -17,6 +17,13 @@ on:
 permissions:
   contents: read
   id-token: write
+    
+env:
+    GCP_PROJECT: ${{ env.GCP_PROJECT }}
+    GCP_REGION: ${{ env.GCP_REGION }}
+    ARTIFACT_REGISTRY_REPOSITORY: ${{ env.ARTIFACT_REGISTRY_REPOSITORY }}
+    IMAGE_NAME: ${{ env.IMAGE_NAME }}
+    IMAGE_TAG: ${{ github.sha }}
 
 jobs:
   build:
@@ -24,12 +31,12 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       image: ${{ steps.set-image.outputs.image }}
-    env:
-      GCP_PROJECT: ${{ env.GCP_PROJECT }}
-      GCP_REGION: ${{ env.GCP_REGION }}
-      ARTIFACT_REGISTRY_REPOSITORY: ${{ env.ARTIFACT_REGISTRY_REPOSITORY }}
-      IMAGE_NAME: ${{ env.IMAGE_NAME }}
-      IMAGE_TAG: ${{ github.sha }}
+    # env:
+    #   GCP_PROJECT: ${{ env.GCP_PROJECT }}
+    #   GCP_REGION: ${{ env.GCP_REGION }}
+    #   ARTIFACT_REGISTRY_REPOSITORY: ${{ env.ARTIFACT_REGISTRY_REPOSITORY }}
+    #   IMAGE_NAME: ${{ env.IMAGE_NAME }}
+    #   IMAGE_TAG: ${{ github.sha }}
 
     steps:
       - name: Checkout
