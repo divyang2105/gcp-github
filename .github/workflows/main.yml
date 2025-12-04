@@ -28,6 +28,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       image: ${{ steps.set-image.outputs.image }}
+    environment: develop
     # env:
     #   GCP_PROJECT: ${{ env.GCP_PROJECT }}
     #   GCP_REGION: ${{ env.GCP_REGION }}
