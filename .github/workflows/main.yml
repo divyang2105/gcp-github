@@ -1,0 +1,123 @@
+name: Build & Deploy to Cloud Run
+
+on:
+  push:
+    branches: [ develop ]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Select environment to deploy to'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+          - dev
+          - test
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  build:
+    name: Build and push image
+    runs-on: ubuntu-latest
+    outputs:
+      image: ${{ steps.set-image.outputs.image }}
+    env:
+      # GCP_PROJECT: ${{ secrets.GCP_PROJECT }}
+      # GCP_REGION: ${{ secrets.GCP_REGION }}
+      # ARTIFACT_REGISTRY_REPOSITORY: ${{ secrets.ARTIFACT_REGISTRY_REPOSITORY }}
+      # IMAGE_NAME: ${{ secrets.IMAGE_NAME }}
+      IMAGE_TAG: ${{ github.sha }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v3
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Setup gcloud
+        uses: google-github-actions/setup-gcloud@v3
+        with:
+          project_id: ${{ env.GCP_PROJECT }}
+
+      - name: Configure Docker for Artifact Registry
+        run: |
+          gcloud auth configure-docker --quiet ${{ env.GCP_REGION }}-docker.pkg.dev
+      - name: Build and Push Docker image
+        run: |
+          IMAGE_URI="${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT }}/${{ env.ARTIFACT_REGISTRY_REPOSITORY }}/${{ env.IMAGE_NAME }}"
+          echo "Building image: ${IMAGE_URI}:${{ github.sha }}"
+          docker build -t ${IMAGE_URI}:${{ github.sha }} .
+          echo "Pushing image: ${IMAGE_URI}:${{ github.sha }}"
+          docker push ${IMAGE_URI}:${{ github.sha }}
+          
+          echo "Tagging and pushing as latest"
+          docker tag ${IMAGE_URI}:${{ github.sha }} ${IMAGE_URI}:latest
+          docker push ${IMAGE_URI}:latest
+      - name: Set image output
+        id: set-image
+        run: |
+          IMAGE_URI="${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT }}/${{ env.ARTIFACT_REGISTRY_REPOSITORY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}"
+          echo "Final image URI: $IMAGE_URI"
+          echo "image=${IMAGE_URI}" >> $GITHUB_OUTPUT
+      - name: Verify output
+        run: |
+          echo "GITHUB_OUTPUT contents:"
+          cat $GITHUB_OUTPUT
+
+  deploy:
+    name: Deploy to ${{ matrix.environment }}
+    needs: build
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        environment: [dev, test]
+    environment:
+      name: ${{ matrix.environment }}
+    if: |
+      (github.event_name == 'push' && github.ref == 'refs/heads/develop' && matrix.environment == 'dev') ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == matrix.environment)
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Debug - Check environment variables
+        run: |
+          echo "Environment: ${{ matrix.environment }}"
+          echo "GCP_PROJECT: ${{ env.GCP_PROJECT }}"
+          echo "Image: ${{ needs.build.outputs.image }}"
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v3
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Setup gcloud
+        uses: google-github-actions/setup-gcloud@v3
+        with:
+          project_id: ${{ env.GCP_PROJECT }}
+
+      - name: Deploy to Cloud Run
+        run: |
+          gcloud run deploy cr-app \
+            --image="${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT }}/${{ env.ARTIFACT_REGISTRY_REPOSITORY }}/${{ env.IMAGE_NAME }}:latest" \
+            --region="${{ env.GCP_REGION }}" \
+            --platform=managed \
+            --allow-unauthenticated \
+            --memory=2Gi \
+            --cpu=2 \
+            --port=8000 \
+            --service-account=${{ env.APP_RUNTIME_SA }}
+            
+      - name: Deployment Summary
+        run: |
+          echo "✅ Successfully deployed to ${{ matrix.environment }}"
+          echo "Image: ${{ needs.build.outputs.image }}"
+          echo "Region: ${{ env.GCP_REGION }}"
+          echo "Service:cr-app"
