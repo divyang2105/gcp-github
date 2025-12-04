@@ -1,0 +1,150 @@
+name: Build & Deploy to Cloud Run (Dev/Test/Stage)
+
+on:
+  push:
+    branches: [ develop ]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Select environment to deploy to'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+          - dev
+          - test
+          - stage
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  IMAGE_TAG: ${{ github.sha }}
+
+jobs:
+  build:
+    name: Build and push image
+    runs-on: ubuntu-latest
+    outputs:
+      image: ${{ steps.set-image.outputs.image }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v3
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Setup gcloud
+        uses: google-github-actions/setup-gcloud@v3
+        with:
+          project_id: ${{ secrets.GCP_PROJECT }}
+
+      - name: Configure Docker for Artifact Registry
+        run: |
+          gcloud auth configure-docker --quiet ${{ secrets.GCP_REGION }}-docker.pkg.dev
+
+      - name: Build Docker image
+        run: |
+          IMAGE_URI=${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT }}/${{ secrets.ARTIFACT_REGISTRY_REPOSITORY }}/${{ secrets.IMAGE_NAME }}
+          docker build -t ${IMAGE_URI}:${IMAGE_TAG} .
+
+      - name: Push to Artifact Registry
+        run: |
+          IMAGE_URI=${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT }}/${{ secrets.ARTIFACT_REGISTRY_REPOSITORY }}/${{ secrets.IMAGE_NAME }}
+          docker push ${IMAGE_URI}:${IMAGE_TAG}
+
+      - name: Tag image as latest
+        if: success()
+        run: |
+          IMAGE_URI=${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT }}/${{ secrets.ARTIFACT_REGISTRY_REPOSITORY }}/${{ secrets.IMAGE_NAME }}
+          docker tag ${IMAGE_URI}:${IMAGE_TAG} ${IMAGE_URI}:latest
+          docker push ${IMAGE_URI}:latest
+
+      - name: Set image output
+        id: set-image
+        shell: bash
+        run: |
+          IMAGE_URI="${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT }}/${{ secrets.ARTIFACT_REGISTRY_REPOSITORY }}/${{ secrets.IMAGE_NAME }}:${IMAGE_TAG}"
+          echo "image=$IMAGE_URI" >> $GITHUB_OUTPUT
+
+  deploy:
+    name: Deploy to ${{ matrix.environment }}
+    needs: build
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        environment: [dev, test, stage]
+    environment: 
+      name: ${{ matrix.environment }}
+      url: https://${{ steps.deploy.outputs.service_url }}
+    if: |
+      (github.event_name == 'push' && github.ref == 'refs/heads/develop' && matrix.environment == 'dev') ||
+      (github.event_name == 'workflow_dispatch')
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v3
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Setup gcloud
+        uses: google-github-actions/setup-gcloud@v3
+        with:
+          project_id: ${{ secrets.GCP_PROJECT }}
+
+      - name: Deploy to Cloud Run
+        id: deploy
+        run: |
+          SERVICE_URL=$(gcloud run deploy ${{ secrets.CLOUD_RUN_SERVICE_NAME }} \
+            --image=${{ needs.build.outputs.image }} \
+            --region ${{ secrets.GCP_REGION }} \
+            --platform managed \
+            --allow-unauthenticated \
+            --memory ${{ secrets.MEMORY || '2Gi' }} \
+            --cpu ${{ secrets.CPU || '2' }} \
+            --port ${{ secrets.PORT || '8000' }} \
+            --service-account ${{ secrets.SERVICE_ACCOUNT }} \
+            --update-env-vars ENVIRONMENT=${{ matrix.environment }} \
+            --format='value(status.url)')
+          echo "service_url=$SERVICE_URL" >> $GITHUB_OUTPUT
+          echo "Deployed to: $SERVICE_URL"
+
+      - name: Print deployment summary
+        run: |
+          echo "✓ Successfully deployed to ${{ matrix.environment }}"
+          echo "Image: ${{ needs.build.outputs.image }}"
+          echo "Service URL: ${{ steps.deploy.outputs.service_url }}"
+
+  promote:
+    name: Manual Promotion Menu
+    needs: deploy
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+    steps:
+      - name: Promotion options
+        run: |
+          echo "## 📦 Deployment Complete"
+          echo ""
+          echo "Current environment: **${{ github.event.inputs.environment }}**"
+          echo ""
+          echo "### Next Steps:"
+          if [[ "${{ github.event.inputs.environment }}" == "dev" ]]; then
+            echo "- ✅ Development deployment complete"
+            echo "- 📋 Next: Trigger manual deployment to **test** when ready"
+            echo "- Use: Workflow Dispatch → Select **test**"
+          elif [[ "${{ github.event.inputs.environment }}" == "test" ]]; then
+            echo "- ✅ Test deployment complete"
+            echo "- 📋 Next: Trigger manual deployment to **stage** when ready"
+            echo "- Use: Workflow Dispatch → Select **stage**"
+          elif [[ "${{ github.event.inputs.environment }}" == "stage" ]]; then
+            echo "- ✅ Staging deployment complete"
+            echo "- 📋 Ready for production release"
+            echo "- Use: Production workflow for main branch"
+          fi
