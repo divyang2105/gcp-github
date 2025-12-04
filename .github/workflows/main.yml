@@ -79,9 +79,9 @@ jobs:
         environment: [dev, test]
     environment:
       name: ${{ matrix.environment }}
-    if: |
-      (github.event_name == 'push' && github.ref == 'refs/heads/develop' && matrix.environment == 'dev') ||
-      (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == matrix.environment)
+    # if: |
+    #   (github.event_name == 'push' && github.ref == 'refs/heads/develop' && matrix.environment == 'dev') ||
+    #   (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == matrix.environment)
 
     steps:
       - name: Checkout
