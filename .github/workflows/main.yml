@@ -32,9 +32,9 @@ jobs:
       IMAGE_TAG: ${{ github.sha }}
     strategy:
       matrix:
-        environment: [ ${{ github.event.inputs.environment || 'dev' }} ]
-    # environment:
-    #   name: ${{ matrix.environment }}
+        environment: [ "${{ github.event.inputs.environment || 'dev' }}" ]
+    environment:
+      name: ${{ matrix.environment }}
     # env:
     #   GCP_PROJECT: ${{ env.GCP_PROJECT }}
     #   GCP_REGION: ${{ env.GCP_REGION }}
