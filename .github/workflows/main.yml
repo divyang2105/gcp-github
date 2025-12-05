@@ -81,54 +81,54 @@ jobs:
           echo "GITHUB_OUTPUT contents:"
           cat $GITHUB_OUTPUT
 
-  # deploy:
-  #   name: Deploy to ${{ matrix.environment }}
-  #   needs: build
-  #   runs-on: ubuntu-latest
-  #   strategy:
-  #     matrix:
-  #       environment: [dev, test]
-  #   environment:
-  #     name: ${{ matrix.environment }}
-  #   # if: |
-  #   #   (github.event_name == 'push' && github.ref == 'refs/heads/develop' && matrix.environment == 'dev') ||
-  #   #   (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == matrix.environment)
+  deploy:
+    name: Deploy to ${{ matrix.environment }}
+    needs: build
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        environment: [ "${{ github.event.inputs.environment || 'dev' }}" ]
+    environment:
+      name: ${{ matrix.environment }}
+    if: |
+      (github.event_name == 'push' && github.ref == 'refs/heads/develop' && matrix.environment == 'dev') ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == matrix.environment)
 
-  #   steps:
-  #     - name: Checkout
-  #       uses: actions/checkout@v4
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
 
-  #     - name: Debug - Check environment variables
-  #       run: |
-  #         echo "Environment: ${{ matrix.environment }}"
-  #         echo "GCP_PROJECT: ${{ vars.GCP_PROJECT }}"
-  #         echo "Image: ${{ needs.build.outputs.image }}"
+      - name: Debug - Check environment variables
+        run: |
+          echo "Environment: ${{ matrix.environment }}"
+          echo "GCP_PROJECT: ${{ vars.GCP_PROJECT }}"
+          echo "Image: ${{ needs.build.outputs.image }}"
 
-  #     - name: Authenticate to Google Cloud
-  #       uses: google-github-actions/auth@v3
-  #       with:
-  #         credentials_json: ${{ secrets.GCP_SA_KEY }}
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v3
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
 
-  #     - name: Setup gcloud
-  #       uses: google-github-actions/setup-gcloud@v3
-  #       with:
-  #         project_id: ${{ vars.GCP_PROJECT }}
+      - name: Setup gcloud
+        uses: google-github-actions/setup-gcloud@v3
+        with:
+          project_id: ${{ vars.GCP_PROJECT }}
 
-  #     - name: Deploy to Cloud Run
-  #       run: |
-  #         gcloud run deploy cr-app \
-  #           --image="${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT }}/${{ vars.ARTIFACT_REGISTRY_REPOSITORY }}/${{ vars.IMAGE_NAME }}:latest" \
-  #           --region="${{ vars.GCP_REGION }}" \
-  #           --platform=managed \
-  #           --allow-unauthenticated \
-  #           --memory=2Gi \
-  #           --cpu=2 \
-  #           --port=8000 \
-  #           --service-account=${{ vars.APP_RUNTIME_SA }}
+      - name: Deploy to Cloud Run
+        run: |
+          gcloud run deploy cr-app \
+            --image="${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT }}/${{ vars.ARTIFACT_REGISTRY_REPOSITORY }}/${{ vars.IMAGE_NAME }}:latest" \
+            --region="${{ vars.GCP_REGION }}" \
+            --platform=managed \
+            --allow-unauthenticated \
+            --memory=2Gi \
+            --cpu=2 \
+            --port=8000 \
+            --service-account=${{ vars.APP_RUNTIME_SA }}
             
-  #     - name: Deployment Summary
-  #       run: |
-  #         echo "✅ Successfully deployed to ${{ matrix.environment }}"
-  #         echo "Image: ${{ needs.build.outputs.image }}"
-  #         echo "Region: ${{ vars.GCP_REGION }}"
-  #         echo "Service:cr-app"
+      - name: Deployment Summary
+        run: |
+          echo "✅ Successfully deployed to ${{ matrix.environment }}"
+          echo "Image: ${{ needs.build.outputs.image }}"
+          echo "Region: ${{ vars.GCP_REGION }}"
+          echo "Service:cr-app"
