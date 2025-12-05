@@ -111,7 +111,7 @@ jobs:
       - name: Deploy to Cloud Run
         run: |
           gcloud run deploy cr-app \
-            --image="$Image" \
+            --image="${{ needs.build.outputs.image }}" \
             --region="${{ vars.GCP_REGION }}" \
             --platform=managed \
             --allow-unauthenticated \
