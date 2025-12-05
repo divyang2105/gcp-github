@@ -30,7 +30,7 @@ jobs:
       image: ${{ steps.set-image.outputs.image }}
     strategy:
       matrix:
-        environment: [dev, test]
+        environment: [ ${{ github.event.inputs.environment || 'dev' }} ]
     environment:
       name: ${{ matrix.environment }}
     # env:
