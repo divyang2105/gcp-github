@@ -72,7 +72,7 @@ jobs:
           echo "image=${IMAGE_URI}" >> $GITHUB_OUTPUT
       - name: Verify output
         run: |
-          echo "GITHUB_OUTPUT contents:"
+          echo "GITHUB_OUTPUT contents: ${{ image }}"
           cat $image
 
   deploy:
