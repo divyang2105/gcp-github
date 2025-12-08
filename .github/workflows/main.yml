@@ -73,7 +73,7 @@ jobs:
       - name: Verify output
         run: |
           echo "GITHUB_OUTPUT contents:"
-          cat $GITHUB_OUTPUT
+          cat $image
 
   deploy:
     name: Deploy to ${{ matrix.environment }}
