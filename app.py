@@ -39,7 +39,7 @@ st.title('Mortgage Calculator')
 # User input
 amount = st.slider('Loan Amount', 1000, 1000000, 100000, step=1000)
 interest_rate = st.slider('Interest Rate', 0.1, 20.0, 3.0, step=0.1)
-years = st.slider('Number of Years', 1, 30, 15)
+years = st.slider('Number of Years', 1, 30, 10)
 
 # Calculate monthly payment
 monthly_payment = calculate_mortgage(amount, interest_rate, years)
