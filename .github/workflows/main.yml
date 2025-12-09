@@ -72,10 +72,7 @@ jobs:
           IMAGE_URI="${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT }}/${{ vars.ARTIFACT_REGISTRY_REPOSITORY }}/${{ vars.IMAGE_NAME }}:${{ github.sha }}"
           echo "Final image URI: $IMAGE_URI"
           echo "image=${IMAGE_URI}" >> $GITHUB_OUTPUT
-      - name: Verify output
-        run: |
-          echo "GITHUB_OUTPUT contents: ${{ image }}"
-          cat $image
+
 
   deploy:
     name: Deploy to ${{ matrix.environment }}
