@@ -115,7 +115,6 @@ jobs:
             --image="${{ needs.build.outputs.image }}" \
             --region="${{ vars.GCP_REGION }}" \
             --platform=managed \
-            --allow-unauthenticated \
             --memory=2Gi \
             --cpu=2 \
             --port=8000 \
