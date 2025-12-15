@@ -113,7 +113,7 @@ jobs:
         run: |
           gcloud run multi-region-services deploy cr-app \
             --image="${{ needs.build.outputs.image }}" \
-            --region=[us-east1, us-central1] \
+            --region="us-east1, us-central1" \
             --platform=managed \
             --memory=2Gi \
             --cpu=2 \
