@@ -119,6 +119,7 @@ jobs:
             --cpu=2 \
             --port=8000 \
             --service-account=${{ vars.APP_RUNTIME_SA }}
+            --quiet
 
       # - name: Deploy to Cloud Run
       #   run: |
