@@ -111,9 +111,9 @@ jobs:
 
       - name: Deploy to Cloud Run
         run: |
-          gcloud run deploy cr-app \
+          gcloud run multi-region-services deploy cr-app \
             --image="${{ needs.build.outputs.image }}" \
-            --region="${{ vars.GCP_REGION }}" \
+            --region=[us-east1, us-central1] \
             --platform=managed \
             --memory=2Gi \
             --cpu=2 \
