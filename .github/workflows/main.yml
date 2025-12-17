@@ -99,46 +99,46 @@ jobs:
           echo "GCP_PROJECT: ${{ vars.GCP_PROJECT }}"
           echo "Image: ${{ needs.build.outputs.image }}"
 
-      - id: auth
-        uses: google-github-actions/auth@v2.0.0  
+      # - id: auth
+      #   uses: google-github-actions/auth@v2.0.0  
+      #   with:
+      #     create_credentials_file: true
+      #     workload_identity_provider: 'projects/274545217258/locations/global/workloadIdentityPools/github-wif/providers/github'
+      #     service_account: 'demosa@green-talent-478006-i8.iam.gserviceaccount.com'
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v3
         with:
-          create_credentials_file: true
-          workload_identity_provider: 'projects/274545217258/locations/global/workloadIdentityPools/github-wif/providers/github'
-          service_account: 'demosa@green-talent-478006-i8.iam.gserviceaccount.com'
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
 
-      # - name: Authenticate to Google Cloud
-      #   uses: google-github-actions/auth@v3
-      #   with:
-      #     credentials_json: ${{ secrets.GCP_SA_KEY }}
-
-      # - name: Setup gcloud
-      #   uses: google-github-actions/setup-gcloud@v3
-      #   with:
-      #     project_id: ${{ vars.GCP_PROJECT }}
-
-      # - name: Deploy to Cloud Run
-      #   run: |
-      #     gcloud alpha run multi-region-services deploy cr-app \
-      #       --image="${{ needs.build.outputs.image }}" \
-      #       --region="us-east1, us-central1" \
-      #       --platform=managed \
-      #       --memory=2Gi \
-      #       --cpu=2 \
-      #       --port=8000 \
-      #       --service-account=${{ vars.APP_RUNTIME_SA }}
-      #       --quiet 
+      - name: Setup gcloud
+        uses: google-github-actions/setup-gcloud@v3
+        with:
+          project_id: ${{ vars.GCP_PROJECT }}
 
       - name: Deploy to Cloud Run
         run: |
           gcloud run deploy cr-app \
-            --image="${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT }}/${{ vars.ARTIFACT_REGISTRY_REPOSITORY }}/${{ vars.IMAGE_NAME }}:latest" \
-            --region="${{ vars.GCP_REGION }}" \
+            --image="${{ needs.build.outputs.image }}" \
+            --region="us-east1, us-central1" \
             --platform=managed \
-            --allow-unauthenticated \
             --memory=2Gi \
             --cpu=2 \
             --port=8000 \
             --service-account=${{ vars.APP_RUNTIME_SA }}
+
+
+      # - name: Deploy to Cloud Run
+      #   run: |
+      #     gcloud run deploy cr-app \
+      #       --image="${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT }}/${{ vars.ARTIFACT_REGISTRY_REPOSITORY }}/${{ vars.IMAGE_NAME }}:latest" \
+      #       --region="${{ vars.GCP_REGION }}" \
+      #       --platform=managed \
+      #       --allow-unauthenticated \
+      #       --memory=2Gi \
+      #       --cpu=2 \
+      #       --port=8000 \
+      #       --service-account=${{ vars.APP_RUNTIME_SA }}
             
       - name: Deployment Summary
         run: |
