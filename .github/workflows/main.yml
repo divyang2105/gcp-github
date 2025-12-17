@@ -102,6 +102,7 @@ jobs:
       - id: auth
         uses: google-github-actions/auth@v2.0.0  
         with:
+          create_credentials_file: true
           workload_identity_provider: 'projects/274545217258/locations/global/workloadIdentityPools/github-wif/providers/github'
           service_account: 'demosa@green-talent-478006-i8.iam.gserviceaccount.com'
 
