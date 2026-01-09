@@ -72,8 +72,6 @@ jobs:
           IMAGE_URI="${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT }}/${{ vars.ARTIFACT_REGISTRY_REPOSITORY }}/${{ vars.IMAGE_NAME }}:${{ github.sha }}"
           echo "Final image URI: $IMAGE_URI"
           echo "image=${IMAGE_URI}" >> $GITHUB_OUTPUT
-
-
   deploy:
     name: Deploy to ${{ matrix.environment }}
     needs: build
@@ -98,14 +96,6 @@ jobs:
           echo "Environment: ${{ matrix.environment }}"
           echo "GCP_PROJECT: ${{ vars.GCP_PROJECT }}"
           echo "Image: ${{ needs.build.outputs.image }}"
-
-      # - id: auth
-      #   uses: google-github-actions/auth@v2.0.0  
-      #   with:
-      #     create_credentials_file: true
-      #     workload_identity_provider: 'projects/274545217258/locations/global/workloadIdentityPools/github-wif/providers/github'
-      #     service_account: 'demosa@green-talent-478006-i8.iam.gserviceaccount.com'
-
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v3
         with:
@@ -120,14 +110,12 @@ jobs:
         run: |
           gcloud run deploy cr-app \
             --image="${{ needs.build.outputs.image }}" \
-            --region="us-east1, us-central1" \
+            --region="${{ vars.GCP_REGION }}" \
             --platform=managed \
             --memory=2Gi \
             --cpu=2 \
             --port=8000 \
             --service-account=${{ vars.APP_RUNTIME_SA }}
-
-
       # - name: Deploy to Cloud Run
       #   run: |
       #     gcloud run deploy cr-app \
