@@ -45,8 +45,8 @@ jobs:
       # Login to JFrog (for dependency download)
       - name: Login to JFrog
         run: |
-          echo ${{ secrets.ART_TOKEN }} | docker login https://krogertechnology.jfrog.io \
-            -u ${{ secrets.ART_USER }} --password-stdin
+          echo ${{ secrets.ART_TOKEN }} | docker login -u ${{ secrets.ART_USER }} krogertechnology.jfrog.io --password-stdin    
+
 
       # Authenticate to Google Artifact Registry (for image push)
       - name: Authenticate to Google Cloud
