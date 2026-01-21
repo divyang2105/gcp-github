@@ -1,10 +1,6 @@
 name: Build & Deploy to Cloud Run with GAR
 
 on:
-  # push:
-  #   branches: [ develop ]
-  # pull_request:
-  #   branches: [ develop ]    
   workflow_dispatch:
     inputs:
       environment:
@@ -20,10 +16,6 @@ permissions:
   contents: read
   id-token: write
     
-# env:
-#     IMAGE_TAG: ${{ github.sha }}
-    # GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}
-
 jobs:
   build:
     name: Build and push image
@@ -32,9 +24,11 @@ jobs:
       image: ${{ steps.set-image.outputs.image }}
     env:
       IMAGE_TAG: ${{ github.sha }}
+      # REGIONS_MAP: '{"dev":["us-central1","us-east1"],"test":["us-central1","us-east1"]}'
     strategy:
       matrix:
         environment: [ "${{ github.event.inputs.environment || 'dev' }}" ]
+        region: [us-central1, us-east1]
     environment:
       name: ${{ matrix.environment }}
 
@@ -45,16 +39,12 @@ jobs:
       # Login to JFrog (for dependency download)
       - uses: jfrog/setup-jfrog-cli@v4
         env:
-          # JFrog Platform url
           JF_URL: https://krogertechnology.jfrog.io
-      
-          # Basic authentication credentials
           JF_USER: ${{ secrets.ART_USER }}
           JF_PASSWORD: ${{ secrets.ART_TOKEN }}
       # - name: Login to JFrog
       #   run: |
       #     echo ${{ secrets.ART_TOKEN }} | docker login -u ${{ secrets.ART_USER }} krogertechnology.jfrog.io --password-stdin    
-
 
       # Authenticate to Google Artifact Registry (for image push)
       - name: Authenticate to Google Cloud
@@ -62,20 +52,15 @@ jobs:
         with:
           credentials_json: ${{ secrets[ format('GCP_SA_KEY_{0}', matrix.environment) ] }}
 
-      # - name: Setup gcloud
-      #   uses: google-github-actions/setup-gcloud@v3
-      #   with:
-      #     project_id: ${{ vars.GCP_PROJECT }}
-
       # Configure Docker for GAR
       - name: Configure Docker for Google Artifact Registry
         run: |
-          gcloud auth configure-docker ${{ vars.GCP_REGION }}-docker.pkg.dev
+          gcloud auth configure-docker ${{ matrix.region }}-docker.pkg.dev
 
       # Build with JFrog credentials as build args
       - name: Build and Push to Google Artifact Registry
         run: |
-          IMAGE_URI="${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT }}/${{ vars.ARTIFACT_REGISTRY_REPOSITORY }}/${{ vars.IMAGE_NAME }}"
+          IMAGE_URI="${{ matrix.region }}}-docker.pkg.dev/${{ vars.GCP_PROJECT }}/${{ vars.ARTIFACT_REGISTRY_REPOSITORY }}/${{ vars.IMAGE_NAME }}"
           docker build \
             --build-arg ART_USER=${{ secrets.ART_USER }} \
             --build-arg ART_TOKEN=${{ secrets.ART_TOKEN }} \
