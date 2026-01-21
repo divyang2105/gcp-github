@@ -60,7 +60,7 @@ jobs:
       # Build with JFrog credentials as build args
       - name: Build and Push to Google Artifact Registry
         run: |
-          IMAGE_URI="${{ matrix.region }}}-docker.pkg.dev/${{ vars.GCP_PROJECT }}/${{ vars.ARTIFACT_REGISTRY_REPOSITORY }}/${{ vars.IMAGE_NAME }}"
+          IMAGE_URI="${{ matrix.region }}-docker.pkg.dev/${{ vars.GCP_PROJECT }}/${{ vars.ARTIFACT_REGISTRY_REPOSITORY }}/${{ vars.IMAGE_NAME }}"
           docker build \
             --build-arg ART_USER=${{ secrets.ART_USER }} \
             --build-arg ART_TOKEN=${{ secrets.ART_TOKEN }} \
